@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OptiLogix | Logistics Optimization System (MCMF Engine)</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ================= DEDICATED AUTH / LOGIN SCREEN ================= -->
+  <div id="loginView" class="auth-wrapper">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo">⚡</div>
+        <h1>OptiLogix Logistics</h1>
+        <p>MCMF Optimization & Transshipment System</p>
+      </div>
+
+      <!-- Auth Tabs: Sign In / Register -->
+      <div class="auth-tabs">
+        <button id="tabLoginBtn" type="button" class="auth-tab-btn active" onclick="switchAuthTab('login')">Sign In</button>
+        <button id="tabRegisterBtn" type="button" class="auth-tab-btn" onclick="switchAuthTab('register')">Register New User</button>
+      </div>
+
+      <!-- Sign In Form -->
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)">
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="loginUsername" class="form-control" placeholder="Enter username (e.g. admin or user)" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPassword" class="form-control" placeholder="Enter password" required autocomplete="current-password">
+        </div>
+        <div id="loginErrorMsg" style="color: #f87171; font-size: 0.85rem; margin-bottom: 0.75rem; display: none;"></div>
+        <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-weight: 600; font-size: 0.95rem;">
+          Sign In to Portal →
+        </button>
+      </form>
+
+      <!-- Register Form (Hidden by default) -->
+      <form id="registerForm" onsubmit="handleRegisterSubmit(event)" style="display: none;">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="regFullName" class="form-control" placeholder="e.g. Rajesh Kumar" required>
+        </div>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="regUsername" class="form-control" placeholder="Choose a username" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="regPassword" class="form-control" placeholder="Choose a password" required autocomplete="new-password">
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <select id="regRole" class="form-control">
+            <option value="USER">User (Place & Track Orders)</option>
+            <option value="ADMIN">Admin (Logistics & Fleet Manager)</option>
+          </select>
+        </div>
+        <div id="regErrorMsg" style="color: #f87171; font-size: 0.85rem; margin-bottom: 0.75rem; display: none;"></div>
+        <button type="submit" id="regSubmitBtn" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-weight: 600;">
+          Create Account & Sign In →
+        </button>
+      </form>
+
+      <!-- Demo Accounts Box for Instant 1-Click Testing -->
+      <div class="demo-login-box">
+        <p>⚡ Quick Demo Access</p>
+        <div class="demo-buttons-grid">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="quickFillAndLogin('admin', 'admin123')">
+            👑 Admin Portal<br><small style="color: #94a3b8;">admin / admin123</small>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="quickFillAndLogin('user', 'user123')">
+            🛒 User Portal<br><small style="color: #94a3b8;">user / user123</small>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MAIN APP VIEW ================= -->
+  <div id="appView" style="display: none;">
+
+    <!-- Top Header -->
+    <header>
+      <div class="navbar">
+        <div class="logo-area">
+          <div class="logo-icon">⚡</div>
+          <div class="logo-text">
+            <h1>OptiLogix Logistics</h1>
+            <p>MCMF Optimization & Transshipment Engine</p>
+          </div>
+        </div>
+        <div class="user-controls">
+          <span id="userName" style="font-size: 0.875rem; font-weight: 600;"></span>
+          <span id="userRole" class="role-badge"></span>
+          <button id="logoutBtn" class="btn btn-secondary btn-sm" onclick="handleLogout()" style="display: flex; align-items: center; gap: 0.35rem; padding: 0.45rem 0.9rem; font-weight: 600;">
+            🚪 Logout
+          </button>
+        </div>
+      </div>
+    </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="tabs-bar">
+    <div class="tabs-container">
+      <!-- Admin Tabs -->
+      <button class="tab-btn admin-only active" data-tab="network">🗺️ Network Topology</button>
+      <button class="tab-btn admin-only" data-tab="warehouses">🏭 Warehouses</button>
+      <button class="tab-btn admin-only" data-tab="inventory">📦 Products & Stock</button>
+      <button class="tab-btn admin-only" data-tab="routes">🛣️ Transportation Routes</button>
+      <button class="tab-btn admin-only" data-tab="compare-routes">🔀 Route Comparison</button>
+      <button class="tab-btn admin-only" data-tab="transfers">🔄 Stock Transfers</button>
+      <button class="tab-btn admin-only" data-tab="orders">📋 Order Management</button>
+
+      <!-- User Tabs -->
+      <button class="tab-btn user-only" data-tab="place-order" style="display: none;">🛒 Place Order</button>
+      <button class="tab-btn user-only" data-tab="my-orders" style="display: none;">📦 My Orders</button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main>
+
+    <!-- TAB 1: Network Topology & Dashboard (Admin) -->
+    <section id="tab-network" class="tab-content active">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-header"><span>Warehouses</span><span>🏭</span></div>
+          <div id="m-warehouses" class="metric-value">5</div>
+          <div class="metric-subtitle">Active distribution hubs</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-header"><span>Catalog SKUs</span><span>📦</span></div>
+          <div id="m-products" class="metric-value">6</div>
+          <div class="metric-subtitle">Managed industrial items</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-header"><span>Physical Inventory</span><span>📊</span></div>
+          <div id="m-stock" class="metric-value">1,480</div>
+          <div class="metric-subtitle">Units in storage</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-header"><span>Low Stock Alerts</span><span>⚠️</span></div>
+          <div id="m-low-stock" class="metric-value" style="color: #f87171;">2</div>
+          <div class="metric-subtitle">Require restocking</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-header"><span>Active Routes</span><span>🚚</span></div>
+          <div id="m-routes" class="metric-value">16/16</div>
+          <div class="metric-subtitle">Direct & transshipment links</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-header"><span>Pending Orders</span><span>⚡</span></div>
+          <div id="m-orders" class="metric-value" style="color: #fbbf24;">1 Pending</div>
+          <div class="metric-subtitle">Awaiting MCMF allocation</div>
+        </div>
+      </div>
+
+      <div class="graph-container">
+        <div class="card-title-bar">
+          <h2>🌐 Live Logistics Network Graph (Warehouses & Shipping Routes)</h2>
+          <button class="btn btn-secondary btn-sm" onclick="refreshAllData()">↻ Refresh Network</button>
+        </div>
+        <canvas id="networkCanvas"></canvas>
+        <div class="canvas-legend">
+          <div class="legend-item"><span class="legend-dot warehouse"></span> Warehouses (Hubs)</div>
+          <div class="legend-item"><span class="legend-dot destination"></span> Delivery Centers (Sinks)</div>
+          <div class="legend-item"><span class="legend-line active"></span> Active Route</div>
+          <div class="legend-item"><span class="legend-line disabled"></span> Blocked / Disabled Route</div>
+          <div class="legend-item"><span style="color: #00f2fe; font-weight: bold;">⚡ Glowing Cyan:</span> Active MCMF Flow Path</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: Warehouses Management (Admin) -->
+    <section id="tab-warehouses" class="tab-content">
+      <div class="table-card">
+        <div class="card-title-bar">
+          <h2>🏭 Warehouse Storage Hubs</h2>
+          <button class="btn btn-primary" onclick="openAddWarehouseModal()">+ Add New Warehouse</button>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Warehouse Name</th>
+                <th>City</th>
+                <th>Address</th>
+                <th>Storage Capacity</th>
+                <th>Coordinates (Lat, Lon)</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="warehousesTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: Products & Inventory Management (Admin) -->
+    <section id="tab-inventory" class="tab-content">
+      <div class="table-card">
+        <div class="card-title-bar">
+          <h2>📦 Multi-Warehouse Product Inventory</h2>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <select id="invWarehouseFilter" class="form-control" style="width: auto;" onchange="renderInventoryTable()">
+              <option value="">All Warehouses</option>
+            </select>
+            <label style="display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; cursor: pointer; color: #f87171;">
+              <input type="checkbox" id="invLowStockToggle" onchange="renderInventoryTable()"> Low Stock Only
+            </label>
+            <button class="btn btn-secondary" onclick="openAddProductModal()">+ Add Product</button>
+            <button class="btn btn-primary" onclick="openAssignStockModal()">+ Assign Stock</button>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Warehouse</th>
+                <th>Product Name</th>
+                <th>SKU</th>
+                <th>Category</th>
+                <th>Unit Value</th>
+                <th>Available Units</th>
+                <th>Reserved</th>
+                <th>Min Threshold</th>
+                <th>Health</th>
+                <th>Quick Quantity Adjustment</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: Transportation Routes (Admin) -->
+    <section id="tab-routes" class="tab-content">
+      <div class="table-card">
+        <div class="card-title-bar">
+          <h2>🛣️ Transportation Routes & Shipping Capacities</h2>
+          <button class="btn btn-primary" onclick="openAddRouteModal()">+ Add Route</button>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Route Code</th>
+                <th>Origin</th>
+                <th>Destination</th>
+                <th>Route Type</th>
+                <th>Unit Cost (₹/unit)</th>
+                <th>Max Capacity</th>
+                <th>Distance</th>
+                <th>Travel Time</th>
+                <th>Route Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="routesTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: Alternative Route Comparison (Admin) -->
+    <section id="tab-compare-routes" class="tab-content">
+      <div class="table-card">
+        <div class="card-title-bar">
+          <h2>🔀 Alternative Route Comparison & Disruption Analysis</h2>
+        </div>
+        <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
+          Compare the cheapest primary route against the second-best alternative using Graph Shortest Path algorithms. Simulate route blockages to observe real-time cost and capacity re-routing.
+        </p>
+
+        <div class="form-row" style="max-width: 800px; margin-bottom: 1rem;">
+          <div class="form-group">
+            <label>Origin Warehouse</label>
+            <select id="compareSourceSelect" class="form-control"></select>
+          </div>
+          <div class="form-group">
+            <label>Destination (Warehouse or Delivery Center)</label>
+            <select id="compareDestSelect" class="form-control"></select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="runRouteComparison()">🔍 Run Route Comparison</button>
+
+        <div id="compareResultsContainer"></div>
+      </div>
+    </section>
+
+    <!-- TAB 6: Inter-Warehouse Stock Transfer (Admin) -->
+    <section id="tab-transfers" class="tab-content">
+      <div class="table-card" style="max-width: 850px; margin: 0 auto;">
+        <div class="card-title-bar">
+          <h2>🔄 Inter-Warehouse Stock Transfer Wizard</h2>
+        </div>
+        <p style="color: var(--text-secondary); margin-bottom: 1.25rem; font-size: 0.9rem;">
+          Rebalance inventory between warehouses. The MCMF optimization engine automatically scans which source warehouses have surplus stock and computes the least-cost transfer route.
+        </p>
+
+        <div class="form-group">
+          <label>1. Destination Warehouse (Receiving Stock)</label>
+          <select id="transferDestWhSelect" class="form-control"></select>
+        </div>
+
+        <div class="form-group">
+          <label>2. Product to Transfer</label>
+          <select id="transferProductSelect" class="form-control"></select>
+        </div>
+
+        <div id="transferCandidatesBox" style="margin-bottom: 1rem;"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>3. Source Warehouse</label>
+            <select id="transferSourceWhSelect" class="form-control">
+              <option value="">Auto-Select Optimal Source via MCMF</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>4. Required Quantity (Units)</label>
+            <input type="number" id="transferQtyInput" class="form-control" placeholder="e.g. 25" min="1" value="20">
+          </div>
+        </div>
+
+        <button class="btn btn-success" style="width: 100%; padding: 0.75rem; font-size: 1rem; margin-top: 1rem;" onclick="executeInterWarehouseTransfer()">
+          ⚡ Calculate & Execute Stock Transfer via MCMF
+        </button>
+      </div>
+    </section>
+
+    <!-- TAB 7: Order Management & MCMF Optimizer (Admin) -->
+    <section id="tab-orders" class="tab-content">
+      <div class="table-card">
+        <div class="card-title-bar">
+          <h2>📋 Order Management & MCMF Route Optimization</h2>
+          <button class="btn btn-secondary btn-sm" onclick="refreshAllData()">↻ Refresh Orders</button>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Order #</th>
+                <th>Client / Requester</th>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Type</th>
+                <th>Source WH</th>
+                <th>Destination</th>
+                <th>Status</th>
+                <th>MCMF Plan</th>
+                <th>Fulfillment Workflow</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 8: Place Order (User Portal) -->
+    <section id="tab-place-order" class="tab-content">
+      <div class="table-card" style="max-width: 700px; margin: 0 auto;">
+        <div class="card-title-bar">
+          <h2>🛒 Place New Shipment Order</h2>
+        </div>
+        <p style="color: var(--text-secondary); margin-bottom: 1.25rem; font-size: 0.9rem;">
+          Submit your product delivery request. Our automated Min-Cost Max-Flow backend will allocate shipments across available warehouses to guarantee optimal transit costs.
+        </p>
+
+        <div class="form-group">
+          <label>Select Product</label>
+          <select id="orderProductSelect" class="form-control"></select>
+          <div id="orderStockPreview"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Delivery Destination</label>
+          <select id="orderDestSelect" class="form-control"></select>
+        </div>
+
+        <div class="form-group">
+          <label>Preferred Source Warehouse (Optional)</label>
+          <select id="orderSourceSelect" class="form-control"></select>
+          <small class="text-muted">Leave empty to allow the algorithm to distribute order among cheapest available origins.</small>
+        </div>
+
+        <div class="form-group">
+          <label>Required Quantity (Units)</label>
+          <input type="number" id="orderQtyInput" class="form-control" placeholder="e.g. 50" min="1" value="30">
+        </div>
+
+        <button class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-size: 1rem; margin-top: 1rem;" onclick="submitUserOrder()">
+          🚀 Submit Order for MCMF Optimization
+        </button>
+      </div>
+    </section>
+
+    <!-- TAB 9: My Orders (User Portal) -->
+    <section id="tab-my-orders" class="tab-content">
+      <div class="table-card">
+        <div class="card-title-bar">
+          <h2>📦 My Order Tracking & Route Details</h2>
+          <button class="btn btn-secondary btn-sm" onclick="refreshAllData()">↻ Refresh</button>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Order #</th>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Type</th>
+                <th>Destination</th>
+                <th>Status</th>
+                <th>Shipping Plan & Cost</th>
+              </tr>
+            </thead>
+            <tbody id="myOrdersTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+  </div> <!-- End #appView -->
+
+  <!-- MODAL: Shipment Plan Inspector -->
+  <div id="shipmentPlanModal" class="modal-overlay">
+    <div class="modal" style="max-width: 800px;">
+      <div class="modal-header">
+        <h3 id="shipmentPlanTitle">MCMF Optimal Shipping Plan</h3>
+        <button class="modal-close" onclick="closeModal('shipmentPlanModal')">&times;</button>
+      </div>
+      <div id="shipmentPlanBody" class="modal-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('shipmentPlanModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Warehouse Connections Inspector -->
+  <div id="connectionsModal" class="modal-overlay">
+    <div class="modal" style="max-width: 850px;">
+      <div class="modal-header">
+        <h3 id="connectionsModalTitle">Warehouse Connections</h3>
+        <button class="modal-close" onclick="closeModal('connectionsModal')">&times;</button>
+      </div>
+      <div id="connectionsModalBody" class="modal-body"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('connectionsModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Add Warehouse -->
+  <div id="addWarehouseModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>+ Add New Warehouse Hub</h3>
+        <button class="modal-close" onclick="closeModal('addWarehouseModal')">&times;</button>
+      </div>
+      <form id="addWarehouseForm">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Warehouse Code</label>
+              <input type="text" id="whCode" class="form-control" placeholder="e.g. WH-MAA" required>
+            </div>
+            <div class="form-group">
+              <label>Warehouse Name</label>
+              <input type="text" id="whName" class="form-control" placeholder="e.g. Chennai South Hub" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>City</label>
+              <input type="text" id="whCity" class="form-control" placeholder="e.g. Chennai" required>
+            </div>
+            <div class="form-group">
+              <label>Storage Capacity (Units)</label>
+              <input type="number" id="whCapacity" class="form-control" placeholder="e.g. 8000" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Street Address</label>
+            <input type="text" id="whAddress" class="form-control" placeholder="e.g. Guindy Industrial Estate, Chennai, Tamil Nadu">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Latitude</label>
+              <input type="number" step="0.0001" id="whLat" class="form-control" placeholder="e.g. 13.0827" value="13.0827" required>
+            </div>
+            <div class="form-group">
+              <label>Longitude</label>
+              <input type="number" step="0.0001" id="whLon" class="form-control" placeholder="e.g. 80.2707" value="80.2707" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('addWarehouseModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Warehouse</button>
+        </div>
+      </form>
+  <!-- MODAL: Edit Warehouse -->
+  <div id="editWarehouseModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>✏ Edit Warehouse Details</h3>
+        <button class="modal-close" onclick="closeModal('editWarehouseModal')">&times;</button>
+      </div>
+      <form id="editWarehouseForm" onsubmit="saveEditWarehouse(event)">
+        <input type="hidden" id="editWhId">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Warehouse Code</label>
+              <input type="text" id="editWhCode" class="form-control" readonly style="opacity: 0.7;">
+            </div>
+            <div class="form-group">
+              <label>Warehouse Name</label>
+              <input type="text" id="editWhName" class="form-control" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>City</label>
+              <input type="text" id="editWhCity" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Storage Capacity (Units)</label>
+              <input type="number" id="editWhCapacity" class="form-control" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Street Address</label>
+            <input type="text" id="editWhAddress" class="form-control">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Latitude</label>
+              <input type="number" step="0.0001" id="editWhLat" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Longitude</label>
+              <input type="number" step="0.0001" id="editWhLon" class="form-control" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('editWarehouseModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Warehouse</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Add Route -->
+  <div id="addRouteModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>+ Add Transportation Route</h3>
+        <button class="modal-close" onclick="closeModal('addRouteModal')">&times;</button>
+      </div>
+      <form id="addRouteForm">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Route Code</label>
+              <input type="text" id="rtCode" class="form-control" placeholder="e.g. RT-MUM-DEL" required>
+            </div>
+            <div class="form-group">
+              <label>Route Type</label>
+              <select id="rtType" class="form-control">
+                <option value="WAREHOUSE_TO_WAREHOUSE">Warehouse to Warehouse</option>
+                <option value="WAREHOUSE_TO_DESTINATION">Warehouse to Delivery Center</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Origin Node</label>
+              <input type="text" id="rtSource" class="form-control" placeholder="e.g. Mumbai Central Hub" required>
+            </div>
+            <div class="form-group">
+              <label>Destination Node</label>
+              <input type="text" id="rtDest" class="form-control" placeholder="e.g. Chennai Retail Center" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Transportation Cost (₹/unit)</label>
+              <input type="number" step="0.5" id="rtCost" class="form-control" placeholder="e.g. 12.5" required>
+            </div>
+            <div class="form-group">
+              <label>Max Shipment Capacity</label>
+              <input type="number" id="rtCap" class="form-control" placeholder="e.g. 120" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Distance (km)</label>
+              <input type="number" id="rtDist" class="form-control" placeholder="e.g. 1420" required>
+            </div>
+            <div class="form-group">
+              <label>Travel Time (Hours)</label>
+              <input type="number" step="0.5" id="rtTime" class="form-control" placeholder="e.g. 24" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('addRouteModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Create Route</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Edit Route -->
+  <div id="editRouteModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>✏ Edit Route Details</h3>
+        <button class="modal-close" onclick="closeModal('editRouteModal')">&times;</button>
+      </div>
+      <form id="editRouteForm" onsubmit="saveEditRoute(event)">
+        <input type="hidden" id="editRtId">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Route Code</label>
+              <input type="text" id="editRtCode" class="form-control" readonly style="opacity: 0.7;">
+            </div>
+            <div class="form-group">
+              <label>Route Type</label>
+              <select id="editRtType" class="form-control">
+                <option value="WAREHOUSE_TO_WAREHOUSE">Warehouse to Warehouse</option>
+                <option value="WAREHOUSE_TO_DESTINATION">Warehouse to Delivery Center</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Origin Node</label>
+              <input type="text" id="editRtSource" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Destination Node</label>
+              <input type="text" id="editRtDest" class="form-control" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Transportation Cost (₹/unit)</label>
+              <input type="number" step="0.5" id="editRtCost" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Max Shipment Capacity</label>
+              <input type="number" id="editRtCap" class="form-control" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Distance (km)</label>
+              <input type="number" id="editRtDist" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label>Travel Time (Hours)</label>
+              <input type="number" step="0.5" id="editRtTime" class="form-control" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+              <input type="checkbox" id="editRtActive"> Active & Operational
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('editRouteModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Route</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- MODAL: Add Product -->
+  <div id="addProductModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>+ Register Product SKU</h3>
+        <button class="modal-close" onclick="closeModal('addProductModal')">&times;</button>
+      </div>
+      <form id="addProductForm">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Product SKU</label>
+              <input type="text" id="pSku" class="form-control" placeholder="e.g. PRD-MED-04" required>
+            </div>
+            <div class="form-group">
+              <label>Product Name</label>
+              <input type="text" id="pName" class="form-control" placeholder="e.g. Surgical Diagnostic Kits" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Category</label>
+              <input type="text" id="pCategory" class="form-control" placeholder="e.g. Medical Supplies" required>
+            </div>
+            <div class="form-group">
+              <label>Unit Value (₹)</label>
+              <input type="number" step="0.1" id="pPrice" class="form-control" placeholder="e.g. 85.0" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Unit Weight (kg)</label>
+              <input type="number" step="0.1" id="pWeight" class="form-control" placeholder="e.g. 1.5" required>
+            </div>
+            <div class="form-group">
+              <label>Low Stock Threshold (Units)</label>
+              <input type="number" id="pThreshold" class="form-control" placeholder="e.g. 20" required>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('addProductModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Register Product</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Assign Stock -->
+  <div id="assignStockModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>+ Assign Inventory to Warehouse</h3>
+        <button class="modal-close" onclick="closeModal('assignStockModal')">&times;</button>
+      </div>
+      <form id="assignStockForm">
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Target Warehouse</label>
+            <select id="assignWhSelect" class="form-control" required></select>
+          </div>
+          <div class="form-group">
+            <label>Product</label>
+            <select id="assignProdSelect" class="form-control" required></select>
+          </div>
+          <div class="form-group">
+            <label>Quantity to Add (Units)</label>
+            <input type="number" id="assignQty" class="form-control" placeholder="e.g. 50" min="1" value="50" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('assignStockModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Assign Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/app.js"></script>
+</body>
+</html>
